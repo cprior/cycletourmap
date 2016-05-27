@@ -96,7 +96,7 @@ if [ ${#tmp[@]} -gt 0 ]; then
       if [ "$_VERBOSE" != "true" ]; then echo -n "."; fi;
       #ToDo: May include the prefix in the config strings?
       wget "$_Q" http://download.geofabrik.de/${f}.poly -O ./data/incoming/poly/${f/\//-}.poly;
-    else if [ "$_VERBOSE" = "true" ]; then echo "The poly file ${f} already existing in ./data/incoming/poly/"; fi;
+    elif [ "$_VERBOSE" = "true" ]; then echo "The poly file ${f} already existing in ./data/incoming/poly/";
     fi;
   done;
   echo -e "\nFinished providing poly files."
@@ -109,11 +109,10 @@ unset tmp
 #/**
 #  * Downloading OSM files from geofabrik
 #  *
-#  * ToDo: Handle "latest" file different than checking for existence of "foo-latest.osm", probably wget -N will already do the trick?
 #  */
 tmp=($_OSMDOWNLOADSGEOFABRIK)
 if [ ${#tmp[@]} -gt 0 ]; then
-  if [ "$_VERBOSE" = "true" ]; then _Q=' '; else _Q='-q'; echo -n "Testing for OSM files"; fi;
+  if [ "$_VERBOSE" = "true" ]; then _Q=' '; else _Q='-q'; echo "Testing for OSM files"; fi;
   for f in ${_OSMDOWNLOADSGEOFABRIK}; do
     #//\//- means _all_ escaped \/ are replaced by - (more readable is //foo/bar, see also http://tldp.org/LDP/abs/html/string-manipulation.html )
     if [ ! -f ./data/incoming/osm/${f//\//-} ]; then
@@ -123,12 +122,19 @@ if [ ${#tmp[@]} -gt 0 ]; then
         #ToDo: May include the prefix in the config strings?
         wget "$_Q" --limit-rate=1000k http://download.geofabrik.de/${f} -c -O data/incoming/osm/${f//\//-};
       else
-        echo -e "Maybe run later\nwget --limit-rate=1000k http://download.geofabrik.de/europe-140101.osm.pbf -c -O data/incoming/osm/${f//\//-}";
+        echo "Maybe run later\nwget --limit-rate=1000k http://download.geofabrik.de/europe-140101.osm.pbf -c -O data/incoming/osm/${f//\//-}";
       fi
-    else if [ "$_VERBOSE" = "true" ]; then echo "The OSM file ${f} already existing in ./data/incoming/osm/"; fi;
+    #elif [ "$_VERBOSE" = "true" ]; then echo "The OSM file ${f} already existing in ./data/incoming/osm/";
+    elif [ "$f" != "${f/-latest/}" ]; then
+      # See: http://blog.yjl.im/2012/03/downloading-only-when-modified-using.html
+      if [[ "$(curl --limit-rate 1000k https://download.geofabrik.de/${f} -z data/incoming/osm/${f//\//-} -o data/incoming/osm/${f//\//-} --silent --location --write-out %{http_code};)" == "200" ]]; then
+        echo "File containing -latest was updated."
+      else
+        echo "File containing -latest was unchanged and therefore _not_ updated."
+      fi
     fi;
   done;
-  echo -e "\nFinished downloading OSM files."
+  echo "Finished downloading/updating OSM files."
 else
   echo "No OSM files specified to download."
 fi
